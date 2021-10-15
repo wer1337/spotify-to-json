@@ -68,7 +68,7 @@ if __name__ == '__main__':
     APP_CONFIG = configs.open_yaml()
     
     # List your playlists you would like and it will go through them and download it
-    playlist_id = ['0dlzONa6fVzAo5zJs7K8Ef']
+    playlist_id = ['']
     headers = api_hook(APP_CONFIG.get("CLIENT_ID"), APP_CONFIG.get("CLIENT_SECRET"))
     
     for id in playlist_id:
