@@ -1,6 +1,5 @@
 # README #
 
-<!-- Instructions -->
 ## Instructions
 
 This is how you set up to be able to use the spotify-to-json script.
