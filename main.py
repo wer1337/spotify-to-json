@@ -1,41 +1,55 @@
 import requests
 import json
+import os
+from pathlib import Path
+from utils.FileIO import Config
 
 
-def main():
-    CLIENT_ID = ''
-    CLIENT_SECRET = ''
+BASE_URL = 'https://api.spotify.com/v1/playlists/'
 
+def api_hook(client_id, client_secret):
     AUTH_URL = 'https://accounts.spotify.com/api/token'
-
-    auth_response = requests.post(AUTH_URL, {'grant_type': 'client_credentials',
-                                             'client_id': CLIENT_ID,
-                                             'client_secret': CLIENT_SECRET,
+        
+    auth_response = requests.post(AUTH_URL, {'grant_type' : 'client_credentials',
+                                             'client_id' : client_id,
+                                             'client_secret' : client_secret,
                                              })
-
-    auth_response_data = auth_response.json()
-
-    access_token = auth_response_data['access_token']
-
+    access_token = auth_response.json()['access_token']
     headers = {
-        'Authorization': f'Bearer {access_token}'
+        'Authorization' : f'Bearer {access_token}'
     }
+    
+    return headers
 
-    # base URL of all Spotify API endpoints
-    BASE_URL = 'https://api.spotify.com/v1/playlists/'
-
-    # Track ID from the URI
-    playlist_id = ''
-
-    # Gets the total number of tracks
+def get_track_count(playlist_id):
     r = requests.get(f'{BASE_URL}{playlist_id}', headers=headers)
     r = r.json()
-    total_count = r['tracks']['total']
+    return r['tracks']['total']
+    
 
-    # Writes to a file
-    with open('spotify_playlist_tippy.txt', 'a+') as outfile:
+def get_playlist(headers, playlist_id):
+    # This will be needed later
+    total_count = get_track_count(playlist_id)\
+    
+    playlist_name = requests.get(
+        f'{BASE_URL}{playlist_id}?market=US&fields=name', headers=headers
+    ).json()['name'].replace(" ", "_")
+    
+    save_file = f'{playlist_name}_playlist.txt'
+    
+    print(f'Now looking at {playlist_name}.\n'\
+          f'Total Number of tracks expected = {total_count}')
+    
+    if Path(save_file).is_file():
+        print(f'Previous instance of file found, will now delete.')
+        os.remove(save_file)
+        print(f'{save_file} has been deleted.')
+
+    with open(save_file, 'a+') as outfile:
         items = []
         json_list = {}
+        
+        # Spotify only allows you to grab 100 songs at a time so you have to split it up
         for i in range((total_count // 100) + 1):
             r = requests.get(
                 f'{BASE_URL}{playlist_id}/tracks?market=US&fields=items(track(name), track(artists(name)), track(external_ids))&offset={i * 100}',
@@ -44,28 +58,20 @@ def main():
             items += list(r['items'])
         json_list['items'] = items
         
-        json.dump(json_list, outfile, indent=4)
-
-
-def read_json_file():
-    with open('spotify_playlist.txt') as json_file:
-        data = json.load(json_file)
-
-        count = 0
-        for p in data['items']:
-            print(f"Track: {p['track']['name']}")
-            for i in p['track']['artists']:
-                print(f'Artists: {i["name"]}')
-            count += 1
-
-    print(count)
-
-
-def create_itunes_playlist(playlist):
-    # TODO
-    pass
+        json.dump(json_list, outfile, indent=4)     
+        
+    print(f'Completed the grab of {playlist_name} and saved to {save_file}')   
 
 
 if __name__ == '__main__':
-    main()
-    # read_json_file()
+    configs = Config()
+    APP_CONFIG = configs.open_yaml()
+    
+    # List your playlists you would like and it will go through them and download it
+    playlist_id = ['0dlzONa6fVzAo5zJs7K8Ef']
+    headers = api_hook(APP_CONFIG.get("CLIENT_ID"), APP_CONFIG.get("CLIENT_SECRET"))
+    
+    for id in playlist_id:
+        get_playlist(headers, id)
+    
+    print('COMPLETED')
