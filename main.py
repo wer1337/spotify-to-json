@@ -24,26 +24,27 @@ def main():
     # base URL of all Spotify API endpoints
     BASE_URL = 'https://api.spotify.com/v1/playlists/'
 
-    user_id = '1242550137'
     # Track ID from the URI
-    playlist_id = '
+    playlist_id = ''
 
+    # Gets the total number of tracks
     r = requests.get(f'{BASE_URL}{playlist_id}', headers=headers)
-
     r = r.json()
-
     total_count = r['tracks']['total']
 
-    with open('spotify_playlist_tippy.txt', 'r+') as outfile:
+    # Writes to a file
+    with open('spotify_playlist_tippy.txt', 'a+') as outfile:
+        items = []
+        json_list = {}
         for i in range((total_count // 100) + 1):
             r = requests.get(
                 f'{BASE_URL}{playlist_id}/tracks?market=US&fields=items(track(name), track(artists(name)), track(external_ids))&offset={i * 100}',
                 headers=headers)
             r = r.json()
-            json.dump(r, outfile, indent=4)
-
-    # with open('spotify_playlist.txt', 'w+') as outfile:
-    #     json.dump(r, outfile, indent=4)
+            items += list(r['items'])
+        json_list['items'] = items
+        
+        json.dump(json_list, outfile, indent=4)
 
 
 def read_json_file():
